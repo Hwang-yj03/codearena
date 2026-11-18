@@ -3,7 +3,7 @@
 > 코드를 제출하면 격리된 환경에서 실행하고 채점하는 **온라인 저지(Online Judge) 플랫폼**
 
 ![status](https://img.shields.io/badge/status-WIP-orange)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-6DB33F?logo=springboot&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1-6DB33F?logo=springboot&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![C++](https://img.shields.io/badge/C++-17-00599C?logo=cplusplus&logoColor=white)
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
@@ -43,7 +43,9 @@ flowchart LR
 - [x] **1단계** 레포 구조, 개발 환경(docker-compose), API 서버 뼈대
 - [x] **1단계** Sandbox Runner v0.1: rlimit 기반 시간·메모리 제한, OK/TLE/MLE/RE 판정
 - [x] **2단계** Judge Worker: Redis 큐 소비, C++/Python/Java 컴파일 및 채점, 테스트 26개 ([설계 기록](docs/02-judge-worker.md))
-- [ ] **3단계** API: 회원(JWT), 문제, 제출 도메인
+- [x] **3단계-1** API: Spring Boot 4.1 업그레이드, MySQL + Flyway, 문제 조회 API ([설계 기록](docs/03-api-problem.md))
+- [ ] **3단계-2** API: 제출 → Redis 큐 → 채점 결과 반영
+- [ ] **3단계-3** API: 회원(JWT), 내 제출 기록
 - [ ] **4단계** Frontend: 문제 목록, 에디터, 실시간 결과
 - [ ] **5단계** 격리 강화: Docker 컨테이너 실행, seccomp, cgroup
 - [ ] **6단계** 배포 및 부하 테스트
@@ -59,9 +61,10 @@ cp .env.example .env
 # 2. MySQL, Redis 실행
 docker compose up -d
 
-# 3. API 서버 (IntelliJ에서 api/ 폴더를 Gradle 프로젝트로 열어 실행해도 됨)
+# 3. API 서버 (MySQL이 떠 있어야 함. 첫 실행 시 Flyway가 테이블과 예제 문제를 만든다)
 cd api && ./gradlew bootRun
-curl localhost:8080/api/ping
+curl localhost:8080/api/problems
+curl localhost:8080/api/problems/1000
 
 # 4. Judge Worker 테스트 및 실행 (Docker)
 docker build -f judge-worker/Dockerfile --target test -t codearena-judge-test .

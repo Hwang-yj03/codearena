@@ -42,7 +42,7 @@ flowchart LR
 
 - [x] **1단계** 레포 구조, 개발 환경(docker-compose), API 서버 뼈대
 - [x] **1단계** Sandbox Runner v0.1: rlimit 기반 시간·메모리 제한, OK/TLE/MLE/RE 판정
-- [ ] **2단계** Judge Worker: Redis 큐 소비, 컴파일, 테스트케이스 채점
+- [x] **2단계** Judge Worker: Redis 큐 소비, C++/Python/Java 컴파일 및 채점, 테스트 26개 ([설계 기록](docs/02-judge-worker.md))
 - [ ] **3단계** API: 회원(JWT), 문제, 제출 도메인
 - [ ] **4단계** Frontend: 문제 목록, 에디터, 실시간 결과
 - [ ] **5단계** 격리 강화: Docker 컨테이너 실행, seccomp, cgroup
@@ -63,8 +63,13 @@ docker compose up -d
 cd api && ./gradlew bootRun
 curl localhost:8080/api/ping
 
-# 4. Sandbox 테스트
-./sandbox/tests/run_tests.sh
+# 4. Judge Worker 테스트 및 실행 (Docker)
+docker build -f judge-worker/Dockerfile --target test -t codearena-judge-test .
+docker run --rm codearena-judge-test
+docker compose up -d --build redis judge-worker
+
+# 5. 제출해 보기
+docker compose exec -T judge-worker python -m judge_worker.submit --problem 1000 --lang python < judge-worker/tests/solutions/ac.py
 ```
 
 ## 기술적 고민 기록

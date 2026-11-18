@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codearena-judge-worker"
+version = "0.1.0"
+description = "CodeArena judge worker: compiles submissions and grades them with the sandbox runner"
+requires-python = ">=3.11"
+dependencies = ["redis>=5.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "fakeredis>=2.20"]
+
+[project.scripts]
+codearena-worker = "judge_worker.worker:main"
+
+[tool.setuptools]
+packages = ["judge_worker"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

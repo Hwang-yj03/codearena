@@ -6,12 +6,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.web.servlet.MockMvc;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+import com.codearena.api.health.HealthController;
+
+/** DB 없이 웹 계층만 띄우는 슬라이스 테스트 */
+@WebMvcTest(HealthController.class)
 class HealthControllerTest {
 
     @Autowired

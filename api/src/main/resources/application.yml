@@ -1,6 +1,17 @@
 spring:
   application:
     name: codearena-api
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:codearena}?serverTimezone=UTC&characterEncoding=UTF-8
+    username: ${DB_USERNAME:codearena}
+    password: ${DB_PASSWORD:change-me}
+  jpa:
+    # 스키마는 Flyway가 관리하고, Hibernate는 엔티티와 테이블이 맞는지 검증만 한다
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
 
 server:
   port: 8080

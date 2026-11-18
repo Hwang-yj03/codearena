@@ -1,8 +1,11 @@
-// codearena sandbox runner (v0.1)
+// codearena sandbox runner (v0.1.1)
 // 제출 프로그램을 자식 프로세스로 실행하고 시간/메모리 제한을 걸어 결과를 JSON으로 출력한다.
 //
 // 사용법:
-//   runner --time <ms> --memory <MB> --input <file> --output <file> -- <command> [args...]
+//   runner --time <ms> --memory <MB> --input <file> --output <file> [--no-as-limit] -- <command> [args...]
+//
+//   --no-as-limit: 주소 공간(RLIMIT_AS) 제한을 끈다. JVM처럼 실제 사용량보다 가상 메모리를
+//                  크게 예약하는 런타임용. 메모리 판정은 ru_maxrss로만 한다.
 //
 // 출력 예:
 //   {"status":"OK","exit_code":0,"signal":0,"time_ms":12,"memory_kb":3456}
@@ -32,12 +35,13 @@ struct Options {
     long memory_mb = 256;
     std::string input = "/dev/null";
     std::string output = "/dev/null";
+    bool as_limit = true;
     std::vector<char*> command;
 };
 
 [[noreturn]] void usage() {
     std::fprintf(stderr,
-        "usage: runner --time <ms> --memory <MB> --input <file> --output <file> -- <command> [args...]\n");
+        "usage: runner --time <ms> --memory <MB> --input <file> --output <file> [--no-as-limit] -- <command> [args...]\n");
     std::exit(2);
 }
 
@@ -47,6 +51,7 @@ Options parse(int argc, char** argv) {
     for (; i < argc; ++i) {
         std::string a = argv[i];
         if (a == "--") { ++i; break; }
+        if (a == "--no-as-limit") { opt.as_limit = false; continue; }
         if (i + 1 >= argc) usage();
         if (a == "--time") opt.time_ms = std::atol(argv[++i]);
         else if (a == "--memory") opt.memory_mb = std::atol(argv[++i]);
@@ -77,9 +82,11 @@ long elapsed_ms(const timeval& a, const timeval& b) {
     setrlimit(RLIMIT_CPU, &cpu);
 
     // 주소 공간 제한. 실제 사용량 판정은 ru_maxrss로 한다.
-    rlim_t mem = static_cast<rlim_t>(opt.memory_mb) * 1024 * 1024 * 2;
-    rlimit as{mem, mem};
-    setrlimit(RLIMIT_AS, &as);
+    if (opt.as_limit) {
+        rlim_t mem = static_cast<rlim_t>(opt.memory_mb) * 1024 * 1024 * 2;
+        rlimit as{mem, mem};
+        setrlimit(RLIMIT_AS, &as);
+    }
 
     rlimit no_core{0, 0};
     setrlimit(RLIMIT_CORE, &no_core);

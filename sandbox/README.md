@@ -14,6 +14,9 @@ cmake -B build && cmake --build build
 
 ```bash
 build/runner --time 1000 --memory 256 --input in.txt --output out.txt -- ./solution
+
+# JVM처럼 가상 메모리를 크게 예약하는 런타임은 주소 공간 제한을 끄고 실사용량(RSS)으로만 판정
+build/runner --time 2000 --memory 256 --input in.txt --output out.txt --no-as-limit -- java -Xmx256m Main
 # {"status":"OK","exit_code":0,"signal":0,"time_ms":12,"memory_kb":3456}
 ```
 

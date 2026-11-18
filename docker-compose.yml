@@ -18,5 +18,17 @@ services:
     ports:
       - "6379:6379"
 
+  judge-worker:
+    build:
+      context: .
+      dockerfile: judge-worker/Dockerfile
+      target: runtime
+    container_name: codearena-judge-worker
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - redis
+    restart: unless-stopped
+
 volumes:
   mysql-data:

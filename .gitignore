@@ -16,3 +16,7 @@ dist/
 sandbox/build/
 # Env
 .env
+
+# Python packaging
+*.egg-info/
+.pytest_cache/

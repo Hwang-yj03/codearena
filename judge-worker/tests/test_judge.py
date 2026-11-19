@@ -1,12 +1,7 @@
 import pytest
 
-from judge_worker.judge import Judge, Verdict, outputs_match
+from judge_worker.judge import Verdict, outputs_match
 from judge_worker.problems import load_problem
-
-
-@pytest.fixture(scope="module")
-def judge(runner):
-    return Judge(runner)
 
 
 @pytest.mark.parametrize("lang,file,expected,passed", [

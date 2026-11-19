@@ -26,15 +26,26 @@ build/runner --time 2000 --memory 256 --input in.txt --output out.txt --no-as-li
 | TLE | 시간 초과 (CPU 시간 초과, 또는 대기 상태로 제한의 3배 경과) |
 | MLE | 메모리 초과 |
 | RE | 런타임 에러 (비정상 종료 코드, 시그널) |
-| SE | 채점 시스템 에러 |
+| SE | 채점 시스템 에러 (실행 파일 없음 등, 제출 코드가 실행되기 전 실패) |
 
-## 동작 원리 (v0.1)
+## 동작 원리 (v0.2)
 
-- `fork()` 후 자식에서 `setrlimit`으로 CPU 시간, 주소 공간, 출력 파일 크기를 제한한 뒤 `execvp`
-- 부모는 `wait4()`로 CPU 시간(`ru_utime + ru_stime`)과 최대 메모리(`ru_maxrss`)를 측정
-- `sleep`처럼 CPU를 쓰지 않는 무한 대기는 wall time 감시로 강제 종료
+자식 프로세스에서 아래 순서로 방어를 건 뒤 `execve`한다.
 
-## 한계와 다음 단계
+1. 입력·출력 파일을 root로 연다 (정답 디렉터리는 root만 읽을 수 있음)
+2. fd 3번 이후를 모두 닫는다
+3. `setrlimit`: CPU 시간, 주소 공간, 스택(= 메모리 제한), 파일 크기 64MB, 스레드 수, fd 수
+4. `--uid/--gid`가 있으면 `setgroups → setresgid → setresuid`로 권한을 내려놓는다
+5. `PR_SET_NO_NEW_PRIVS`
+6. seccomp BPF: 네트워크, 프로세스 생성(run 모드), 디버깅, 권한 변경, 커널 조작 차단
+7. `--env`로 준 환경 변수만 넘겨 `execve`
 
-v0.1은 **자원 제한만** 걸고, 파일 시스템·네트워크 격리는 하지 않습니다.
-5단계에서 Docker 컨테이너 + seccomp + cgroup으로 격리를 강화할 예정입니다.
+부모는 `wait4()`로 CPU 시간과 최대 메모리(`ru_maxrss`)를 측정하고, CPU를 쓰지 않는 무한 대기는 wall time으로 잡는다.
+`execve` 전 실패는 `O_CLOEXEC` 파이프로 알려 받아 `SE`로 판정한다 (제출 코드의 `exit(127)`과 구분).
+
+| 모드 | 용도 | 프로세스 생성 |
+|---|---|---|
+| `run` | 제출 코드 실행 | 금지 (스레드만 허용) |
+| `compile` | 컴파일러 실행 (`#include`로 정답을 읽는 공격 대비) | 허용 |
+
+자세한 위협 모델과 검증 과정은 [docs/07-sandbox-security.md](../docs/07-sandbox-security.md)에 있습니다.

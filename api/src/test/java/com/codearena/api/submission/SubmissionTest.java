@@ -8,7 +8,7 @@ class SubmissionTest {
 
     @Test
     void newSubmissionIsPending() {
-        var s = new Submission(1000L, Language.CPP, "int main(){}");
+        var s = new Submission(1L, 1000L, Language.CPP, "int main(){}");
 
         assertThat(s.getStatus()).isEqualTo(SubmissionStatus.PENDING);
         assertThat(s.getVerdict()).isNull();
@@ -16,7 +16,7 @@ class SubmissionTest {
 
     @Test
     void applyResultMarksDone() {
-        var s = new Submission(1000L, Language.CPP, "int main(){}");
+        var s = new Submission(1L, 1000L, Language.CPP, "int main(){}");
 
         boolean applied = s.applyResult(Verdict.AC, 3, 3500, 3, 3, "");
 
@@ -29,7 +29,7 @@ class SubmissionTest {
 
     @Test
     void duplicateResultIsIgnored() {
-        var s = new Submission(1000L, Language.CPP, "int main(){}");
+        var s = new Submission(1L, 1000L, Language.CPP, "int main(){}");
         s.applyResult(Verdict.WA, 1, 3000, 2, 3, null);
 
         boolean applied = s.applyResult(Verdict.AC, 1, 3000, 3, 3, null);

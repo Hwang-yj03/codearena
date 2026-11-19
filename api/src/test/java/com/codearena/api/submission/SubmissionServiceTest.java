@@ -47,11 +47,12 @@ class SubmissionServiceTest {
             return s;
         });
 
-        var response = submissionService.submit(new SubmitRequest(1000L, "python", "print(1)"));
+        var response = submissionService.submit(1L, new SubmitRequest(1000L, "python", "print(1)"));
 
         assertThat(response.id()).isEqualTo(1L);
         assertThat(response.status()).isEqualTo("PENDING");
         assertThat(response.language()).isEqualTo("python");
+        assertThat(response.memberId()).isEqualTo(1L);
 
         var captor = ArgumentCaptor.forClass(SubmissionCreatedEvent.class);
         verify(eventPublisher).publishEvent(captor.capture());
@@ -63,7 +64,7 @@ class SubmissionServiceTest {
     void submitToUnknownProblemFailsWithoutSavingOrPublishing() {
         given(problemRepository.existsById(9999L)).willReturn(false);
 
-        assertThatThrownBy(() -> submissionService.submit(new SubmitRequest(9999L, "cpp", "x")))
+        assertThatThrownBy(() -> submissionService.submit(1L, new SubmitRequest(9999L, "cpp", "x")))
                 .isInstanceOf(NotFoundException.class);
         verify(submissionRepository, never()).save(any());
         verify(eventPublisher, never()).publishEvent(any());
@@ -71,7 +72,7 @@ class SubmissionServiceTest {
 
     @Test
     void applyResultUpdatesSubmission() {
-        var s = new Submission(1000L, Language.CPP, "src");
+        var s = new Submission(1L, 1000L, Language.CPP, "src");
         given(submissionRepository.findById(1L)).willReturn(Optional.of(s));
 
         submissionService.applyResult(new JudgeResultMessage(1L, "WA", 2, 3500, 2, 3, ""));
@@ -83,7 +84,7 @@ class SubmissionServiceTest {
 
     @Test
     void unknownVerdictBecomesSystemError() {
-        var s = new Submission(1000L, Language.CPP, "src");
+        var s = new Submission(1L, 1000L, Language.CPP, "src");
         given(submissionRepository.findById(1L)).willReturn(Optional.of(s));
 
         submissionService.applyResult(new JudgeResultMessage(1L, "WHAT", 0, 0, 0, 3, null));

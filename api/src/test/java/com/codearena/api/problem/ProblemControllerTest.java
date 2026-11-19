@@ -10,17 +10,25 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.codearena.api.common.NotFoundException;
+import com.codearena.api.config.SecurityConfig;
 import com.codearena.api.problem.dto.ProblemDetailResponse;
 import com.codearena.api.problem.dto.ProblemSummary;
 
+@Import(SecurityConfig.class)
 @WebMvcTest(ProblemController.class)
 class ProblemControllerTest {
+
+    /** 실제 토큰 검증은 JwtTokenProviderTest에서 한다. 여기서는 jwt() 요청 후처리기로 인증을 흉내낸다. */
+    @MockitoBean
+    JwtDecoder jwtDecoder;
 
     @Autowired
     MockMvc mockMvc;

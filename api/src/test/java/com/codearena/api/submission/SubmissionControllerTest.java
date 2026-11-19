@@ -1,6 +1,10 @@
 package com.codearena.api.submission;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -13,16 +17,24 @@ import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.codearena.api.common.NotFoundException;
+import com.codearena.api.config.SecurityConfig;
 import com.codearena.api.submission.dto.SubmissionResponse;
 import com.codearena.api.submission.dto.SubmitRequest;
 
+@Import(SecurityConfig.class)
 @WebMvcTest(SubmissionController.class)
 class SubmissionControllerTest {
+
+    /** 실제 토큰 검증은 JwtTokenProviderTest에서 한다. 여기서는 jwt() 요청 후처리기로 인증을 흉내낸다. */
+    @MockitoBean
+    JwtDecoder jwtDecoder;
 
     @Autowired
     MockMvc mockMvc;
@@ -31,15 +43,27 @@ class SubmissionControllerTest {
     SubmissionService submissionService;
 
     private static SubmissionResponse pending(long id) {
-        return new SubmissionResponse(id, 1000L, "cpp", "PENDING", null, null, null, null, null, null,
+        return new SubmissionResponse(id, 1L, 1000L, "cpp", "PENDING", null, null, null, null, null, null,
                 LocalDateTime.now(), null);
     }
 
     @Test
+    void submitWithoutTokenIs401() throws Exception {
+        mockMvc.perform(post("/api/submissions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"problemId": 1000, "language": "cpp", "source": "int main(){}"}
+                                """))
+                .andExpect(status().isUnauthorized());
+        verify(submissionService, never()).submit(any(), any());
+    }
+
+    @Test
     void submitReturns202WithLocation() throws Exception {
-        given(submissionService.submit(any(SubmitRequest.class))).willReturn(pending(7));
+        given(submissionService.submit(eq(1L), any(SubmitRequest.class))).willReturn(pending(7));
 
         mockMvc.perform(post("/api/submissions")
+                        .with(jwt().jwt(j -> j.subject("1")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"problemId": 1000, "language": "cpp", "source": "int main(){}"}
@@ -47,12 +71,14 @@ class SubmissionControllerTest {
                 .andExpect(status().isAccepted())
                 .andExpect(header().string("Location", "/api/submissions/7"))
                 .andExpect(jsonPath("$.id").value(7))
+                .andExpect(jsonPath("$.memberId").value(1))
                 .andExpect(jsonPath("$.status").value("PENDING"));
     }
 
     @Test
     void unsupportedLanguageIs400() throws Exception {
         mockMvc.perform(post("/api/submissions")
+                        .with(jwt().jwt(j -> j.subject("1")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"problemId": 1000, "language": "rust", "source": "fn main(){}"}
@@ -64,6 +90,7 @@ class SubmissionControllerTest {
     @Test
     void blankSourceIs400() throws Exception {
         mockMvc.perform(post("/api/submissions")
+                        .with(jwt().jwt(j -> j.subject("1")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"problemId": 1000, "language": "cpp", "source": "   "}
@@ -74,7 +101,7 @@ class SubmissionControllerTest {
 
     @Test
     void getReturnsSubmission() throws Exception {
-        var done = new SubmissionResponse(7L, 1000L, "cpp", "DONE", "AC", 3, 3500, 3, 3, null,
+        var done = new SubmissionResponse(7L, 1L, 1000L, "cpp", "DONE", "AC", 3, 3500, 3, 3, null,
                 LocalDateTime.now(), LocalDateTime.now());
         given(submissionService.getSubmission(7L)).willReturn(done);
 

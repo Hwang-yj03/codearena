@@ -17,6 +17,12 @@ API ◀──BRPOP── codearena:results ◀──LPUSH───────�
 | Python 3 | `py_compile` (문법 오류 → CE) | ×3 + 2초 | |
 | Java 21 | `javac` | ×2 + 1초 | JVM 특성상 주소 공간 제한 대신 `-Xmx`, RSS로 판정 |
 
+## 보안
+
+제출 코드와 컴파일러는 모두 sandbox runner를 거쳐 `nobody` 계정 + seccomp 아래에서 실행됩니다.
+정답 파일 읽기, 네트워크, 포크 폭탄, 셸 실행, 환경 변수 탈취 등을 실제 공격 코드로 테스트합니다.
+→ [docs/07-sandbox-security.md](../docs/07-sandbox-security.md)
+
 ## 판정
 
 `AC` 정답 · `WA` 오답 · `TLE` 시간 초과 · `MLE` 메모리 초과 · `RE` 런타임 에러 · `CE` 컴파일 에러 · `SE` 시스템 에러
@@ -34,7 +40,7 @@ judge_worker/
 ├── cli.py         Redis 없이 로컬 채점
 └── submit.py      개발용 제출 도구
 problems/<id>/     meta.json + N.in / N.out
-tests/             pytest (26개: 언어별 AC/WA/TLE/MLE/RE/CE, 큐 동작)
+tests/             pytest 47개: 언어별 판정, 큐 동작·장애 복구, 악성 코드 차단(test_security.py)
 ```
 
 ## 실행 (Docker, Windows/macOS/Linux 공통)
@@ -44,9 +50,9 @@ sandbox runner가 Linux 전용 시스템 콜(`fork`, `setrlimit`, `wait4`)을 �
 ```bash
 # 레포 루트에서
 
-# 테스트
+# 테스트 (운영과 같은 capability로 실행)
 docker build -f judge-worker/Dockerfile --target test -t codearena-judge-test .
-docker run --rm codearena-judge-test
+docker run --rm --cap-drop ALL --cap-add SETUID --cap-add SETGID --cap-add KILL codearena-judge-test
 
 # 워커 실행
 docker compose up -d --build redis judge-worker

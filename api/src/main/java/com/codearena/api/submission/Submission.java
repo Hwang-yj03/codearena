@@ -28,6 +28,10 @@ public class Submission {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** 로그인 도입 전 제출은 NULL */
+    @Column(name = "member_id")
+    private Long memberId;
+
     @Column(name = "problem_id", nullable = false)
     private Long problemId;
 
@@ -70,7 +74,8 @@ public class Submission {
     @Column(name = "judged_at")
     private LocalDateTime judgedAt;
 
-    public Submission(Long problemId, Language language, String source) {
+    public Submission(Long memberId, Long problemId, Language language, String source) {
+        this.memberId = memberId;
         this.problemId = problemId;
         this.language = language;
         this.source = source;

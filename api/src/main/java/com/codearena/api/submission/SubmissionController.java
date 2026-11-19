@@ -3,6 +3,8 @@ package com.codearena.api.submission;
 import java.net.URI;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -10,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.codearena.api.auth.CurrentMember;
 import com.codearena.api.submission.dto.SubmissionResponse;
 import com.codearena.api.submission.dto.SubmitRequest;
 
@@ -25,8 +28,9 @@ public class SubmissionController {
 
     /** 채점은 비동기라 결과가 아니라 "접수됨(202)"을 돌려주고, 조회 URL을 Location에 담는다. */
     @PostMapping
-    public ResponseEntity<SubmissionResponse> submit(@Valid @RequestBody SubmitRequest request) {
-        SubmissionResponse created = submissionService.submit(request);
+    public ResponseEntity<SubmissionResponse> submit(@AuthenticationPrincipal Jwt jwt,
+                                                     @Valid @RequestBody SubmitRequest request) {
+        SubmissionResponse created = submissionService.submit(CurrentMember.id(jwt), request);
         return ResponseEntity.accepted()
                 .location(URI.create("/api/submissions/" + created.id()))
                 .body(created);

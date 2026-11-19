@@ -45,7 +45,7 @@ flowchart LR
 - [x] **2단계** Judge Worker: Redis 큐 소비, C++/Python/Java 컴파일 및 채점, 테스트 26개 ([설계 기록](docs/02-judge-worker.md))
 - [x] **3단계-1** API: Spring Boot 4.1 업그레이드, MySQL + Flyway, 문제 조회 API ([설계 기록](docs/03-api-problem.md))
 - [x] **3단계-2** API: 제출 → Redis 큐 → 채점 결과 반영, 커밋 후 발행 + 멱등 결과 처리 ([설계 기록](docs/04-api-submission.md))
-- [ ] **3단계-3** API: 회원(JWT), 내 제출 기록
+- [x] **3단계-3** API: 회원가입/로그인(JWT, Spring Security Resource Server), 내 제출 기록 ([설계 기록](docs/05-api-auth.md))
 - [ ] **4단계** Frontend: 문제 목록, 에디터, 실시간 결과
 - [ ] **5단계** 격리 강화: Docker 컨테이너 실행, seccomp, cgroup
 - [ ] **6단계** 배포 및 부하 테스트
@@ -65,10 +65,19 @@ docker compose up -d --build
 cd api && ./gradlew bootRun
 curl localhost:8080/api/problems/1000
 
-# 코드 제출 → 202 Accepted, 잠시 후 결과 조회
-curl -i -X POST localhost:8080/api/submissions -H "Content-Type: application/json" \
+# 회원가입 → 로그인 → 토큰 저장
+curl -X POST localhost:8080/api/auth/signup -H "Content-Type: application/json" \
+  -d '{"email":"me@example.com","password":"password123","nickname":"tester"}'
+TOKEN=$(curl -s -X POST localhost:8080/api/auth/login -H "Content-Type: application/json" \
+  -d '{"email":"me@example.com","password":"password123"}' | sed -E 's/.*"accessToken":"([^"]+)".*/\1/')
+
+# 코드 제출 (로그인 필요) → 202 Accepted, 잠시 후 결과 조회
+curl -i -X POST localhost:8080/api/submissions -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"problemId":1000,"language":"python","source":"a,b=map(int,input().split())\nprint(a+b)"}'
 curl localhost:8080/api/submissions/1
+
+# 내 제출 기록
+curl localhost:8080/api/members/me/submissions -H "Authorization: Bearer $TOKEN"
 
 # 4. Judge Worker 단위 테스트 (Docker)
 docker build -f judge-worker/Dockerfile --target test -t codearena-judge-test .

@@ -44,7 +44,7 @@ flowchart LR
 - [x] **1단계** Sandbox Runner v0.1: rlimit 기반 시간·메모리 제한, OK/TLE/MLE/RE 판정
 - [x] **2단계** Judge Worker: Redis 큐 소비, C++/Python/Java 컴파일 및 채점, 테스트 26개 ([설계 기록](docs/02-judge-worker.md))
 - [x] **3단계-1** API: Spring Boot 4.1 업그레이드, MySQL + Flyway, 문제 조회 API ([설계 기록](docs/03-api-problem.md))
-- [ ] **3단계-2** API: 제출 → Redis 큐 → 채점 결과 반영
+- [x] **3단계-2** API: 제출 → Redis 큐 → 채점 결과 반영, 커밋 후 발행 + 멱등 결과 처리 ([설계 기록](docs/04-api-submission.md))
 - [ ] **3단계-3** API: 회원(JWT), 내 제출 기록
 - [ ] **4단계** Frontend: 문제 목록, 에디터, 실시간 결과
 - [ ] **5단계** 격리 강화: Docker 컨테이너 실행, seccomp, cgroup
@@ -58,20 +58,23 @@ flowchart LR
 # 1. 환경 변수
 cp .env.example .env
 
-# 2. MySQL, Redis 실행
-docker compose up -d
+# 2. MySQL, Redis, Judge Worker 실행
+docker compose up -d --build
 
-# 3. API 서버 (MySQL이 떠 있어야 함. 첫 실행 시 Flyway가 테이블과 예제 문제를 만든다)
+# 3. API 서버 (MySQL, Redis가 떠 있어야 함. 첫 실행 시 Flyway가 테이블과 예제 문제를 만든다)
 cd api && ./gradlew bootRun
-curl localhost:8080/api/problems
 curl localhost:8080/api/problems/1000
 
-# 4. Judge Worker 테스트 및 실행 (Docker)
+# 코드 제출 → 202 Accepted, 잠시 후 결과 조회
+curl -i -X POST localhost:8080/api/submissions -H "Content-Type: application/json" \
+  -d '{"problemId":1000,"language":"python","source":"a,b=map(int,input().split())\nprint(a+b)"}'
+curl localhost:8080/api/submissions/1
+
+# 4. Judge Worker 단위 테스트 (Docker)
 docker build -f judge-worker/Dockerfile --target test -t codearena-judge-test .
 docker run --rm codearena-judge-test
-docker compose up -d --build redis judge-worker
 
-# 5. 제출해 보기
+# (참고) API 없이 워커만 확인할 때. API가 켜져 있으면 결과를 API가 먼저 가져간다
 docker compose exec -T judge-worker python -m judge_worker.submit --problem 1000 --lang python < judge-worker/tests/solutions/ac.py
 ```
 

@@ -6,7 +6,7 @@
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1-6DB33F?logo=springboot&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![C++](https://img.shields.io/badge/C++-17-00599C?logo=cplusplus&logoColor=white)
-![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 
 ## 왜 만들었나
 
@@ -33,7 +33,7 @@ flowchart LR
 
 | 모듈 | 언어 | 역할 |
 |---|---|---|
-| `frontend/` | React, TypeScript | 문제 보기, 코드 에디터, 채점 결과 표시 |
+| `frontend/` | React 19, TypeScript | 문제 보기, 코드 에디터(Monaco), 채점 결과 폴링, 내 제출 기록 |
 | `api/` | Java 21, Spring Boot | 회원·문제·제출 관리, 채점 요청 발행 |
 | `judge-worker/` | Python | 큐에서 제출을 꺼내 컴파일 → 테스트케이스별 실행 → 결과 비교 |
 | `sandbox/` | C++17 | 제출 프로그램을 시간·메모리 제한 하에 실행하고 사용량 측정 |
@@ -46,8 +46,8 @@ flowchart LR
 - [x] **3단계-1** API: Spring Boot 4.1 업그레이드, MySQL + Flyway, 문제 조회 API ([설계 기록](docs/03-api-problem.md))
 - [x] **3단계-2** API: 제출 → Redis 큐 → 채점 결과 반영, 커밋 후 발행 + 멱등 결과 처리 ([설계 기록](docs/04-api-submission.md))
 - [x] **3단계-3** API: 회원가입/로그인(JWT, Spring Security Resource Server), 내 제출 기록 ([설계 기록](docs/05-api-auth.md))
-- [ ] **4단계** Frontend: 문제 목록, 에디터, 실시간 결과
-- [ ] **5단계** 격리 강화: Docker 컨테이너 실행, seccomp, cgroup
+- [x] **4단계** Frontend: React 19 + TanStack Query + Monaco, 문제 풀이·채점 결과·내 제출 기록 ([설계 기록](docs/06-frontend.md))
+- [x] **5단계** 샌드박스 보안: nobody 권한 분리, seccomp, 컴파일러 격리, 컨테이너 최소 권한, 공격 코드 테스트 19개 ([설계 기록](docs/07-sandbox-security.md))
 - [ ] **6단계** 배포 및 부하 테스트
 
 자세한 일정은 [docs/ROADMAP.md](docs/ROADMAP.md)를 참고하세요.
@@ -79,9 +79,12 @@ curl localhost:8080/api/submissions/1
 # 내 제출 기록
 curl localhost:8080/api/members/me/submissions -H "Authorization: Bearer $TOKEN"
 
-# 4. Judge Worker 단위 테스트 (Docker)
+# 4. 웹 화면 (새 터미널에서) → http://localhost:5173
+cd frontend && npm install && npm run dev
+
+# 5. Judge Worker 단위 테스트 (Docker)
 docker build -f judge-worker/Dockerfile --target test -t codearena-judge-test .
-docker run --rm codearena-judge-test
+docker run --rm --cap-drop ALL --cap-add SETUID --cap-add SETGID --cap-add KILL codearena-judge-test
 
 # (참고) API 없이 워커만 확인할 때. API가 켜져 있으면 결과를 API가 먼저 가져간다
 docker compose exec -T judge-worker python -m judge_worker.submit --problem 1000 --lang python < judge-worker/tests/solutions/ac.py

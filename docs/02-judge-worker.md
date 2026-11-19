@@ -32,3 +32,18 @@ int 오버플로를 잡는 테스트케이스로 `1000000000 1000000000`을 넣�
 | 결과 큐 하나를 여러 소비자가 공유 | 3단계에서 API 서버가 결과를 DB에 저장하고 클라이언트는 SSE로 수신 |
 | 제출 코드가 파일 시스템·네트워크에 접근 가능 | 5단계에서 컨테이너 격리 + seccomp + cgroup |
 | 워커 1대 | 컨테이너 수평 확장 (`docker compose up --scale judge-worker=N`) 후 처리량 측정 |
+
+## 6. 운영 중 발견한 장애: 조용할 때 워커가 죽는다
+
+**증상:** 보안 강화(5단계) 후 `docker compose ps`에서 워커가 `Restarting`. 로그에는 `redis.exceptions.TimeoutError: Timeout reading from socket` (BRPOP 중).
+
+**원인:** redis-py 8부터 `socket_timeout` 기본값이 5초가 됐다. 워커의 `BRPOP` 대기도 5초라서, 제출이 없는 조용한 순간에 소켓 타임아웃이 먼저 터졌다.
+게다가 워커 루프가 Redis 예외를 잡지 않아 프로세스가 통째로 죽었다. 의존성을 새로 설치한 이미지에서만 드러난 문제다.
+
+**해결:**
+- 소켓 대기 시간을 `BRPOP 대기 + 10초`로 명시했다. 라이브러리 기본값에 기대지 않는다.
+- Redis 연결·타임아웃 예외는 잡아서 1, 2, 4, …, 최대 10초 간격으로 재시도한다.
+- 채점 중 예상 못한 예외가 나면 해당 제출만 `SE`로 결과를 보낸다. 워커는 계속 돌고, 제출이 영원히 "채점 중"으로 남지 않는다.
+- 회귀 테스트: `test_worker_survives_redis_timeouts`, `test_unexpected_judge_error_becomes_system_error`. 실제 Redis에 붙여 제출 없이 오래 둬도 예외가 나지 않는지 확인했다.
+
+**교훈:** 장시간 실행되는 소비자(consumer)는 "외부 장애가 와도 죽지 않는다"를 테스트로 보장해야 한다. 그리고 블로킹 명령의 대기 시간과 소켓 타임아웃은 항상 함께 설계해야 한다.

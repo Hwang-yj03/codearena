@@ -29,6 +29,21 @@ services:
     depends_on:
       - redis
     restart: unless-stopped
+    # ---- 제출 코드를 실행하는 컨테이너라 최소 권한으로 잠근다 (docs/07-sandbox-security.md) ----
+    # 제출마다 nobody로 권한을 내려놓는 데 필요한 3개만 남기고 모든 capability 제거
+    cap_drop: [ALL]
+    cap_add: [SETUID, SETGID, KILL]
+    # setuid 실행 파일 등으로 권한을 다시 얻는 것을 금지
+    security_opt:
+      - no-new-privileges:true
+    # 이미지 파일 시스템은 읽기 전용. 채점 작업 폴더만 메모리 위 tmpfs (크기 제한, 컴파일 결과 실행 허용)
+    read_only: true
+    tmpfs:
+      - /tmp:size=512m,mode=1777,exec
+    # 컨테이너 전체 자원 상한 (샌드박스 rlimit이 뚫려도 호스트를 지킨다)
+    pids_limit: 256
+    mem_limit: 2g
+    cpus: 2
 
 volumes:
   mysql-data:

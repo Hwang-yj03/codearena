@@ -12,6 +12,15 @@ spring:
     open-in-view: false
   flyway:
     enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+codearena:
+  judge:
+    # 채점 결과 큐 소비 스레드. 테스트나 API만 따로 띄울 때 false로 끌 수 있다
+    result-consumer-enabled: ${JUDGE_RESULT_CONSUMER_ENABLED:true}
 
 server:
   port: 8080

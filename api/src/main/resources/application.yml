@@ -18,6 +18,10 @@ spring:
       port: ${REDIS_PORT:6379}
 
 codearena:
+  jwt:
+    # 운영에서는 반드시 JWT_SECRET 환경변수로 32바이트 이상의 임의 문자열을 넣는다
+    secret: ${JWT_SECRET:local-dev-only-secret-change-me-0123456789}
+    access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:1h}
   judge:
     # 채점 결과 큐 소비 스레드. 테스트나 API만 따로 띄울 때 false로 끌 수 있다
     result-consumer-enabled: ${JUDGE_RESULT_CONSUMER_ENABLED:true}

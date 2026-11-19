@@ -9,7 +9,7 @@ import json
 import os
 from pathlib import Path
 
-from .judge import Judge
+from .judge import Judge, default_sandbox_user
 from .problems import load_problem
 
 
@@ -24,7 +24,7 @@ def main():
     a = p.parse_args()
 
     problem = load_problem(a.problems_dir, a.problem)
-    result = Judge(Path(a.runner)).judge(a.lang, a.source.read_text(encoding="utf-8"), problem)
+    result = Judge(Path(a.runner), default_sandbox_user()).judge(a.lang, a.source.read_text(encoding="utf-8"), problem)
     print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
 
 
